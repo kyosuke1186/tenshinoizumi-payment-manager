@@ -253,6 +253,7 @@
 
     table {
       width: 100%;
+      min-width: 820px;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -279,6 +280,10 @@
 
     .col-date {
       width: 142px;
+    }
+
+    .col-place {
+      width: 190px;
     }
 
     .col-amount {
@@ -856,11 +861,15 @@
     }
 
     function savePayments() {
+      persistLocal();
+      syncToSheet();
+    }
+
+    function persistLocal() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         masters: state.masters,
         entries: state.entries
       }));
-      syncToSheet();
     }
 
     function saveConfig() {
@@ -942,7 +951,7 @@
             <td class="col-date">
               <input class="cell-input" type="date" data-field="date" data-master="${master.id}" value="${escapeHtml(entry.date)}" ${disabled}>
             </td>
-            <td>
+            <td class="col-place">
               <input class="cell-input" type="text" data-field="place" data-master="${master.id}" value="${escapeHtml(entry.place)}" placeholder="手渡し場所" ${disabled}>
             </td>
             <td class="col-amount">
@@ -969,7 +978,7 @@
             <tr>
               <th>項目</th>
               <th class="col-date">日程</th>
-              <th>場所</th>
+              <th class="col-place">場所</th>
               <th class="col-amount">金額</th>
               <th class="col-status">状態</th>
               <th class="col-actions">操作</th>
@@ -1063,14 +1072,26 @@
       render();
     }
 
-    function updateEntry(masterId, field, value) {
+    function handleFieldInput(event) {
+      const field = event.target?.dataset?.field;
+      const masterId = event.target?.dataset?.master;
+      if (!field || !masterId) return;
+      updateEntry(masterId, field, event.target.value, { sync: false });
+    }
+
+    function updateEntry(masterId, field, value, options = {}) {
+      const shouldSync = options.sync !== false;
       const entry = ensureEntry(masterId, state.currentMonth);
       entry[field] = field === "amount" ? String(Math.max(0, Number(value || 0)) || "") : value;
       if (field !== "excluded") {
         entry.excluded = false;
         entry.carryover = false;
       }
-      savePayments();
+      if (shouldSync) {
+        savePayments();
+      } else {
+        persistLocal();
+      }
     }
 
     function toggleExcluded(masterId) {
@@ -1404,6 +1425,7 @@
       showToast("設定を保存しました");
     });
     document.addEventListener("click", handlePageClick);
+    document.addEventListener("input", handleFieldInput);
     document.addEventListener("change", handleSelection);
     el.modalBackdrop.addEventListener("click", event => {
       if (event.target === el.modalBackdrop) closeModal();
