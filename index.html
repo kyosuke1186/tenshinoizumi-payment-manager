@@ -273,25 +273,21 @@
       border-bottom: 0;
     }
 
-    .col-check {
-      width: 42px;
-    }
-
     .col-date {
-      width: 70px;
+      width: 142px;
     }
 
     .col-amount {
-      width: 118px;
+      width: 126px;
       text-align: right;
     }
 
     .col-status {
-      width: 90px;
+      width: 88px;
     }
 
     .col-actions {
-      width: 92px;
+      width: 118px;
       text-align: right;
     }
 
@@ -332,6 +328,30 @@
       color: var(--unpaid);
       border-color: rgba(135, 91, 247, .24);
       background: rgba(135, 91, 247, .08);
+    }
+
+    .status.excluded {
+      color: var(--muted);
+      border-color: rgba(102, 112, 133, .24);
+      background: rgba(102, 112, 133, .08);
+    }
+
+    .cell-input {
+      min-height: 36px;
+      padding: 7px 9px;
+      border-radius: 7px;
+      font-size: .86rem;
+      background: #fff;
+    }
+
+    .cell-input:disabled {
+      color: var(--muted);
+      background: #f2f4f7;
+      cursor: not-allowed;
+    }
+
+    .amount-input {
+      text-align: right;
     }
 
     .mini-actions {
@@ -613,7 +633,7 @@
     <header class="topbar">
       <div class="brand">
         <h1>月別支払い管理</h1>
-        <p>広告費と固定費を月ごとに手入力して、合計をすぐ確認できます。</p>
+        <p>支払い先をマスター管理し、月ごとの日程・場所・金額を確定していきます。</p>
       </div>
 
       <div class="month-control" aria-label="表示月の切り替え">
@@ -627,19 +647,19 @@
 
     <section class="summary" aria-label="月別集計">
       <div class="summary-item">
-        <div class="summary-label">月合計</div>
+        <div class="summary-label">確定分合計</div>
         <div class="summary-value" id="totalAmount">0円</div>
       </div>
       <div class="summary-item">
-        <div class="summary-label">広告費</div>
+        <div class="summary-label">広告費 確定分</div>
         <div class="summary-value ad" id="adAmount">0円</div>
       </div>
       <div class="summary-item">
-        <div class="summary-label">固定費</div>
+        <div class="summary-label">固定費 確定分</div>
         <div class="summary-value fixed" id="fixedAmount">0円</div>
       </div>
       <div class="summary-item">
-        <div class="summary-label">選択中の合計</div>
+        <div class="summary-label">未確定</div>
         <div class="summary-value selected" id="selectedAmount">0円</div>
       </div>
     </section>
@@ -654,7 +674,7 @@
               <p><span id="adCount">0</span>件 / <span id="adSectionTotal">0円</span></p>
             </div>
           </div>
-          <button class="add-btn ad-bg" type="button" data-add="広告費">＋ 追加</button>
+          <button class="add-btn ad-bg" type="button" data-add="広告費">＋ 項目追加</button>
         </div>
         <div class="table-wrap" id="adTable"></div>
       </article>
@@ -668,7 +688,7 @@
               <p><span id="fixedCount">0</span>件 / <span id="fixedSectionTotal">0円</span></p>
             </div>
           </div>
-          <button class="add-btn fixed-bg" type="button" data-add="固定費">＋ 追加</button>
+          <button class="add-btn fixed-bg" type="button" data-add="固定費">＋ 項目追加</button>
         </div>
         <div class="table-wrap" id="fixedTable"></div>
       </article>
@@ -676,14 +696,14 @@
 
     <div class="footer-actions">
       <span id="syncStatus">このブラウザに自動保存されます。</span>
-      <button class="danger-link" id="clearMonth" type="button">表示月のデータを全削除</button>
+      <button class="danger-link" id="clearMonth" type="button">表示月の入力をクリア</button>
     </div>
   </main>
 
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <form class="modal" id="paymentForm">
       <div class="modal-head">
-        <h3 id="modalTitle">支払いを追加</h3>
+        <h3 id="modalTitle">項目を追加</h3>
         <button class="close-btn" id="closeModal" type="button" aria-label="閉じる">×</button>
       </div>
 
@@ -697,28 +717,13 @@
               <option value="固定費">固定費</option>
             </select>
           </div>
-          <div class="field">
-            <label for="paymentDate">支払日</label>
-            <input id="paymentDate" type="date" required>
-          </div>
           <div class="field full">
-            <label for="paymentName">項目名</label>
-            <input id="paymentName" type="text" placeholder="例：Google広告、サーバー代" required>
-          </div>
-          <div class="field">
-            <label for="paymentAmount">金額</label>
-            <input id="paymentAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="例：300000" required>
-          </div>
-          <div class="field">
-            <label for="paymentStatus">状態</label>
-            <select id="paymentStatus">
-              <option value="未払い">未払い</option>
-              <option value="支払い済み">支払い済み</option>
-            </select>
+            <label for="paymentName">支払い先・項目名</label>
+            <input id="paymentName" type="text" placeholder="例：Google広告、A先生、サーバー代" required>
           </div>
           <div class="field full">
             <label for="paymentMemo">メモ</label>
-            <textarea id="paymentMemo" placeholder="任意でメモを入力"></textarea>
+            <textarea id="paymentMemo" placeholder="任意でマスター用メモを入力"></textarea>
           </div>
         </div>
       </div>
@@ -759,14 +764,15 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    const STORAGE_KEY = "tenshinoizumi-payment-manager-v1";
+    const STORAGE_KEY = "tenshinoizumi-payment-manager-v2";
+    const LEGACY_STORAGE_KEY = "tenshinoizumi-payment-manager-v1";
     const CONFIG_KEY = "tenshinoizumi-payment-manager-config-v1";
     const categories = ["広告費", "固定費"];
 
     const state = {
-      payments: [],
+      masters: [],
+      entries: [],
       currentMonth: toMonthValue(new Date()),
-      selectedIds: new Set(),
       config: {
         scriptUrl: "",
         token: ""
@@ -791,10 +797,7 @@
       form: document.getElementById("paymentForm"),
       paymentId: document.getElementById("paymentId"),
       paymentCategory: document.getElementById("paymentCategory"),
-      paymentDate: document.getElementById("paymentDate"),
       paymentName: document.getElementById("paymentName"),
-      paymentAmount: document.getElementById("paymentAmount"),
-      paymentStatus: document.getElementById("paymentStatus"),
       paymentMemo: document.getElementById("paymentMemo"),
       syncStatus: document.getElementById("syncStatus"),
       settingsBackdrop: document.getElementById("settingsBackdrop"),
@@ -816,10 +819,15 @@
 
     function loadPayments() {
       try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        state.payments = Array.isArray(saved) ? saved : [];
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        if (saved && Array.isArray(saved.masters) && Array.isArray(saved.entries)) {
+          state.masters = saved.masters.map(normalizeMaster).filter(Boolean);
+          state.entries = saved.entries.map(normalizeEntry).filter(Boolean);
+        } else {
+          migrateLegacyPayments();
+        }
       } catch {
-        state.payments = [];
+        migrateLegacyPayments();
       }
 
       try {
@@ -833,7 +841,10 @@
     }
 
     function savePayments() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.payments));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        masters: state.masters,
+        entries: state.entries
+      }));
       syncToSheet();
     }
 
@@ -841,68 +852,90 @@
       localStorage.setItem(CONFIG_KEY, JSON.stringify(state.config));
     }
 
-    function currentMonthPayments() {
-      return state.payments
-        .filter(payment => payment.date.startsWith(state.currentMonth))
-        .sort((a, b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name, "ja"));
+    function currentMonthRows() {
+      return state.masters
+        .filter(master => master.active !== false)
+        .map(master => ({
+          master,
+          entry: getEntry(master.id, state.currentMonth)
+        }))
+        .sort((a, b) => {
+          const categoryOrder = categories.indexOf(a.master.category) - categories.indexOf(b.master.category);
+          if (categoryOrder !== 0) return categoryOrder;
+          return a.master.name.localeCompare(b.master.name, "ja");
+        });
     }
 
-    function sum(payments) {
-      return payments.reduce((total, payment) => total + Number(payment.amount || 0), 0);
+    function confirmedRows(rows) {
+      return rows.filter(row => getRowStatus(row) === "確定");
+    }
+
+    function sumRows(rows) {
+      return rows.reduce((total, row) => total + Number(row.entry.amount || 0), 0);
     }
 
     function render() {
       el.monthPicker.value = state.currentMonth;
 
-      const monthPayments = currentMonthPayments();
-      const adPayments = monthPayments.filter(payment => payment.category === "広告費");
-      const fixedPayments = monthPayments.filter(payment => payment.category === "固定費");
-      const selectedPayments = monthPayments.filter(payment => state.selectedIds.has(payment.id));
+      const rows = currentMonthRows();
+      const adRows = rows.filter(row => row.master.category === "広告費");
+      const fixedRows = rows.filter(row => row.master.category === "固定費");
+      const confirmed = confirmedRows(rows);
+      const confirmedAd = confirmedRows(adRows);
+      const confirmedFixed = confirmedRows(fixedRows);
+      const pendingCount = rows.filter(row => getRowStatus(row) === "未確定").length;
+      const excludedCount = rows.filter(row => getRowStatus(row) === "対象外").length;
 
-      el.totalAmount.textContent = formatYen(sum(monthPayments));
-      el.adAmount.textContent = formatYen(sum(adPayments));
-      el.fixedAmount.textContent = formatYen(sum(fixedPayments));
-      el.selectedAmount.textContent = formatYen(sum(selectedPayments));
-      el.adSectionTotal.textContent = formatYen(sum(adPayments));
-      el.fixedSectionTotal.textContent = formatYen(sum(fixedPayments));
-      el.adCount.textContent = adPayments.length;
-      el.fixedCount.textContent = fixedPayments.length;
+      el.totalAmount.textContent = formatYen(sumRows(confirmed));
+      el.adAmount.textContent = formatYen(sumRows(confirmedAd));
+      el.fixedAmount.textContent = formatYen(sumRows(confirmedFixed));
+      el.selectedAmount.textContent = `${pendingCount}件`;
+      el.adSectionTotal.textContent = `${formatYen(sumRows(confirmedAd))} / 未確定${adRows.filter(row => getRowStatus(row) === "未確定").length}件`;
+      el.fixedSectionTotal.textContent = `${formatYen(sumRows(confirmedFixed))} / 未確定${fixedRows.filter(row => getRowStatus(row) === "未確定").length}件`;
+      el.adCount.textContent = adRows.length;
+      el.fixedCount.textContent = fixedRows.length;
 
-      renderTable(el.adTable, adPayments, "広告費");
-      renderTable(el.fixedTable, fixedPayments, "固定費");
+      renderTable(el.adTable, adRows, "広告費");
+      renderTable(el.fixedTable, fixedRows, "固定費");
       updateSyncStatus();
     }
 
-    function renderTable(container, payments, category) {
-      if (!payments.length) {
-        container.innerHTML = `<div class="empty">${category}の項目はまだありません。</div>`;
+    function renderTable(container, rows, category) {
+      if (!rows.length) {
+        container.innerHTML = `<div class="empty">${category}のマスター項目はまだありません。</div>`;
         return;
       }
 
-      const rows = payments.map(payment => {
-        const day = Number(payment.date.slice(-2));
-        const checked = state.selectedIds.has(payment.id) ? "checked" : "";
-        const statusClass = payment.status === "支払い済み" ? "paid" : "unpaid";
-        const memo = payment.memo ? `<div class="item-note">${escapeHtml(payment.memo)}</div>` : "";
+      const rowHtml = rows.map(row => {
+        const { master, entry } = row;
+        const status = getRowStatus(row);
+        const statusClass = status === "確定" ? "paid" : status === "対象外" ? "excluded" : "unpaid";
+        const memo = master.memo ? `<div class="item-note">${escapeHtml(master.memo)}</div>` : "";
+        const disabled = entry.excluded ? "disabled" : "";
 
         return `
           <tr>
-            <td class="col-check">
-              <input type="checkbox" data-select="${payment.id}" ${checked} aria-label="${escapeHtml(payment.name)}を選択">
-            </td>
-            <td class="col-date">${day}日</td>
             <td>
-              <div class="item-name">${escapeHtml(payment.name)}</div>
+              <div class="item-name">${escapeHtml(master.name)}</div>
               ${memo}
             </td>
-            <td class="col-amount amount">${formatYen(payment.amount)}</td>
+            <td class="col-date">
+              <input class="cell-input" type="date" data-field="date" data-master="${master.id}" value="${escapeHtml(entry.date)}" ${disabled}>
+            </td>
+            <td>
+              <input class="cell-input" type="text" data-field="place" data-master="${master.id}" value="${escapeHtml(entry.place)}" placeholder="手渡し場所" ${disabled}>
+            </td>
+            <td class="col-amount">
+              <input class="cell-input amount-input" type="number" min="0" step="1" inputmode="numeric" data-field="amount" data-master="${master.id}" value="${escapeHtml(entry.amount)}" placeholder="0" ${disabled}>
+            </td>
             <td class="col-status">
-              <button class="status ${statusClass}" type="button" data-status="${payment.id}">${payment.status}</button>
+              <span class="status ${statusClass}">${status}</span>
             </td>
             <td class="col-actions">
               <span class="mini-actions">
-                <button class="mini-btn" type="button" data-edit="${payment.id}" title="編集">✎</button>
-                <button class="mini-btn delete" type="button" data-delete="${payment.id}" title="削除">×</button>
+                <button class="mini-btn" type="button" data-exclude="${master.id}" title="今月なし">${entry.excluded ? "戻" : "休"}</button>
+                <button class="mini-btn" type="button" data-edit="${master.id}" title="マスター編集">✎</button>
+                <button class="mini-btn delete" type="button" data-delete="${master.id}" title="マスター削除">×</button>
               </span>
             </td>
           </tr>
@@ -913,29 +946,26 @@
         <table>
           <thead>
             <tr>
-              <th class="col-check"></th>
-              <th class="col-date">日付</th>
               <th>項目</th>
+              <th class="col-date">日程</th>
+              <th>場所</th>
               <th class="col-amount">金額</th>
               <th class="col-status">状態</th>
               <th class="col-actions">操作</th>
             </tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody>${rowHtml}</tbody>
         </table>
       `;
     }
 
     function openModal(category, id = "") {
-      const payment = id ? state.payments.find(item => item.id === id) : null;
-      el.paymentId.value = payment?.id || "";
-      el.paymentCategory.value = payment?.category || category || "広告費";
-      el.paymentDate.value = payment?.date || `${state.currentMonth}-01`;
-      el.paymentName.value = payment?.name || "";
-      el.paymentAmount.value = payment?.amount || "";
-      el.paymentStatus.value = payment?.status || "未払い";
-      el.paymentMemo.value = payment?.memo || "";
-      el.modalTitle.textContent = payment ? "支払いを編集" : `${el.paymentCategory.value}を追加`;
+      const master = id ? state.masters.find(item => item.id === id) : null;
+      el.paymentId.value = master?.id || "";
+      el.paymentCategory.value = master?.category || category || "広告費";
+      el.paymentName.value = master?.name || "";
+      el.paymentMemo.value = master?.memo || "";
+      el.modalTitle.textContent = master ? "項目マスターを編集" : `${el.paymentCategory.value}の項目を追加`;
       el.modalBackdrop.classList.add("open");
       setTimeout(() => el.paymentName.focus(), 50);
     }
@@ -949,29 +979,26 @@
       event.preventDefault();
 
       const id = el.paymentId.value || createId();
-      const payment = {
+      const master = {
         id,
         category: el.paymentCategory.value,
-        date: el.paymentDate.value,
         name: el.paymentName.value.trim(),
-        amount: Number(el.paymentAmount.value || 0),
-        status: el.paymentStatus.value,
-        memo: el.paymentMemo.value.trim()
+        memo: el.paymentMemo.value.trim(),
+        active: true
       };
 
-      if (!categories.includes(payment.category) || !payment.date || !payment.name || payment.amount < 0) {
+      if (!categories.includes(master.category) || !master.name) {
         showToast("入力内容を確認してください");
         return;
       }
 
-      const existingIndex = state.payments.findIndex(item => item.id === id);
+      const existingIndex = state.masters.findIndex(item => item.id === id);
       if (existingIndex >= 0) {
-        state.payments[existingIndex] = payment;
+        state.masters[existingIndex] = master;
       } else {
-        state.payments.push(payment);
+        state.masters.push(master);
       }
 
-      state.currentMonth = payment.date.slice(0, 7);
       savePayments();
       closeModal();
       render();
@@ -982,7 +1009,7 @@
       const addCategory = event.target.closest("[data-add]")?.dataset.add;
       const editId = event.target.closest("[data-edit]")?.dataset.edit;
       const deleteId = event.target.closest("[data-delete]")?.dataset.delete;
-      const statusId = event.target.closest("[data-status]")?.dataset.status;
+      const excludeId = event.target.closest("[data-exclude]")?.dataset.exclude;
 
       if (addCategory) {
         openModal(addCategory);
@@ -993,41 +1020,49 @@
       }
 
       if (deleteId) {
-        deletePayment(deleteId);
+        deleteMaster(deleteId);
       }
 
-      if (statusId) {
-        toggleStatus(statusId);
+      if (excludeId) {
+        toggleExcluded(excludeId);
       }
     }
 
     function handleSelection(event) {
-      const id = event.target?.dataset?.select;
-      if (!id) return;
+      const field = event.target?.dataset?.field;
+      const masterId = event.target?.dataset?.master;
+      if (!field || !masterId) return;
 
-      if (event.target.checked) {
-        state.selectedIds.add(id);
-      } else {
-        state.selectedIds.delete(id);
-      }
+      updateEntry(masterId, field, event.target.value);
       render();
     }
 
-    function toggleStatus(id) {
-      const payment = state.payments.find(item => item.id === id);
-      if (!payment) return;
-      payment.status = payment.status === "支払い済み" ? "未払い" : "支払い済み";
+    function updateEntry(masterId, field, value) {
+      const entry = ensureEntry(masterId, state.currentMonth);
+      entry[field] = field === "amount" ? String(Math.max(0, Number(value || 0)) || "") : value;
+      if (field !== "excluded") entry.excluded = false;
+      savePayments();
+    }
+
+    function toggleExcluded(masterId) {
+      const entry = ensureEntry(masterId, state.currentMonth);
+      entry.excluded = !entry.excluded;
+      if (entry.excluded) {
+        entry.date = "";
+        entry.place = "";
+        entry.amount = "";
+      }
       savePayments();
       render();
     }
 
-    function deletePayment(id) {
-      const payment = state.payments.find(item => item.id === id);
-      if (!payment) return;
-      if (!confirm(`「${payment.name}」を削除しますか？`)) return;
+    function deleteMaster(id) {
+      const master = state.masters.find(item => item.id === id);
+      if (!master) return;
+      if (!confirm(`「${master.name}」をマスターから削除しますか？過去月の入力も削除されます。`)) return;
 
-      state.payments = state.payments.filter(item => item.id !== id);
-      state.selectedIds.delete(id);
+      state.masters = state.masters.filter(item => item.id !== id);
+      state.entries = state.entries.filter(item => item.masterId !== id);
       savePayments();
       render();
       showToast("削除しました");
@@ -1041,19 +1076,17 @@
     }
 
     function clearCurrentMonth() {
-      const monthPayments = currentMonthPayments();
-      if (!monthPayments.length) {
+      const monthEntries = state.entries.filter(entry => entry.month === state.currentMonth);
+      if (!monthEntries.length) {
         showToast("削除するデータがありません");
         return;
       }
-      if (!confirm(`${state.currentMonth}のデータをすべて削除しますか？`)) return;
+      if (!confirm(`${state.currentMonth}の入力内容をクリアしますか？マスター項目は残ります。`)) return;
 
-      const monthIds = new Set(monthPayments.map(payment => payment.id));
-      state.payments = state.payments.filter(payment => !monthIds.has(payment.id));
-      monthIds.forEach(id => state.selectedIds.delete(id));
+      state.entries = state.entries.filter(entry => entry.month !== state.currentMonth);
       savePayments();
       render();
-      showToast("表示月のデータを削除しました");
+      showToast("表示月の入力をクリアしました");
     }
 
     function showToast(message) {
@@ -1089,11 +1122,20 @@
       updateSyncStatus("Googleスプレッドシートから読み込み中...");
       try {
         const result = await requestSheet("list");
-        if (Array.isArray(result.payments)) {
-          state.payments = result.payments.map(normalizePayment).filter(Boolean);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.payments));
+        const data = result.data || {};
+        if (Array.isArray(data.masters) && Array.isArray(data.entries)) {
+          state.masters = data.masters.map(normalizeMaster).filter(Boolean);
+          state.entries = data.entries.map(normalizeEntry).filter(Boolean);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ masters: state.masters, entries: state.entries }));
           render();
           showToast("スプレッドシートから読み込みました");
+        } else if (Array.isArray(result.payments)) {
+          state.masters = [];
+          state.entries = [];
+          result.payments.map(normalizePayment).filter(Boolean).forEach(addLegacyPayment);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ masters: state.masters, entries: state.entries }));
+          render();
+          showToast("旧形式データを読み込みました");
         }
       } catch (error) {
         updateSyncStatus("スプレッドシートを読み込めませんでした。ブラウザ内のデータを表示しています。");
@@ -1108,7 +1150,7 @@
       state.isSyncing = true;
       updateSyncStatus("Googleスプレッドシートへ保存中...");
       try {
-        await requestSheet("replaceAll", { payments: state.payments });
+        await requestSheet("replaceAll", { data: { masters: state.masters, entries: state.entries } });
         updateSyncStatus(`Googleスプレッドシートへ保存済み ${new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`);
       } catch (error) {
         updateSyncStatus("スプレッドシート保存に失敗しました。ブラウザ内には保存されています。");
@@ -1132,6 +1174,29 @@
       return result;
     }
 
+    function normalizeMaster(master) {
+      if (!master || !master.id || !master.name) return null;
+      return {
+        id: String(master.id),
+        category: categories.includes(master.category) ? master.category : "固定費",
+        name: String(master.name),
+        memo: String(master.memo || ""),
+        active: master.active !== false
+      };
+    }
+
+    function normalizeEntry(entry) {
+      if (!entry || !entry.masterId || !entry.month) return null;
+      return {
+        masterId: String(entry.masterId),
+        month: String(entry.month),
+        date: String(entry.date || ""),
+        place: String(entry.place || ""),
+        amount: entry.amount === 0 ? "0" : String(entry.amount || ""),
+        excluded: Boolean(entry.excluded)
+      };
+    }
+
     function normalizePayment(payment) {
       if (!payment || !payment.id || !payment.date || !payment.name) return null;
       return {
@@ -1143,6 +1208,66 @@
         status: payment.status === "支払い済み" ? "支払い済み" : "未払い",
         memo: String(payment.memo || "")
       };
+    }
+
+    function migrateLegacyPayments() {
+      state.masters = [];
+      state.entries = [];
+      try {
+        const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "[]");
+        if (Array.isArray(legacy)) {
+          legacy.map(normalizePayment).filter(Boolean).forEach(addLegacyPayment);
+        }
+      } catch {
+        state.masters = [];
+        state.entries = [];
+      }
+    }
+
+    function addLegacyPayment(payment) {
+      const existing = state.masters.find(master => master.category === payment.category && master.name === payment.name);
+      const master = existing || {
+        id: createId(),
+        category: payment.category,
+        name: payment.name,
+        memo: payment.memo,
+        active: true
+      };
+      if (!existing) state.masters.push(master);
+      state.entries.push({
+        masterId: master.id,
+        month: payment.date.slice(0, 7),
+        date: payment.date,
+        place: "",
+        amount: String(payment.amount || ""),
+        excluded: false
+      });
+    }
+
+    function getEntry(masterId, month) {
+      return state.entries.find(entry => entry.masterId === masterId && entry.month === month) || {
+        masterId,
+        month,
+        date: "",
+        place: "",
+        amount: "",
+        excluded: false
+      };
+    }
+
+    function ensureEntry(masterId, month) {
+      let entry = state.entries.find(item => item.masterId === masterId && item.month === month);
+      if (!entry) {
+        entry = { masterId, month, date: "", place: "", amount: "", excluded: false };
+        state.entries.push(entry);
+      }
+      return entry;
+    }
+
+    function getRowStatus(row) {
+      if (row.entry.excluded) return "対象外";
+      if (row.entry.date && row.entry.place.trim() && row.entry.amount !== "") return "確定";
+      return "未確定";
     }
 
     function createId() {
