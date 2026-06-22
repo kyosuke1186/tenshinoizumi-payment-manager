@@ -47,7 +47,7 @@
     }
 
     .app {
-      width: min(1180px, calc(100% - 32px));
+      width: min(1440px, calc(100% - 32px));
       margin: 0 auto;
       padding: 24px 0 48px;
     }
@@ -126,7 +126,7 @@
 
     .summary {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
       margin: 22px 0;
     }
@@ -172,7 +172,7 @@
 
     .workspace {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       gap: 18px;
       align-items: start;
     }
@@ -253,7 +253,7 @@
 
     table {
       width: 100%;
-      min-width: 820px;
+      min-width: 1040px;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -278,12 +278,16 @@
       border-bottom: 0;
     }
 
+    .col-item {
+      width: 260px;
+    }
+
     .col-date {
       width: 142px;
     }
 
     .col-place {
-      width: 190px;
+      width: 240px;
     }
 
     .col-amount {
@@ -585,7 +589,6 @@
     }
 
     @media (max-width: 900px) {
-      .summary,
       .workspace {
         grid-template-columns: 1fr;
       }
@@ -944,7 +947,7 @@
 
         return `
           <tr>
-            <td>
+            <td class="col-item">
               <div class="item-name">${escapeHtml(master.name)}</div>
               ${memo}
             </td>
@@ -976,7 +979,7 @@
         <table>
           <thead>
             <tr>
-              <th>項目</th>
+              <th class="col-item">項目</th>
               <th class="col-date">日程</th>
               <th class="col-place">場所</th>
               <th class="col-amount">金額</th>
