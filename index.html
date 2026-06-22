@@ -166,6 +166,10 @@
       color: var(--primary);
     }
 
+    .carry {
+      color: var(--unpaid);
+    }
+
     .workspace {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -287,7 +291,7 @@
     }
 
     .col-actions {
-      width: 118px;
+      width: 154px;
       text-align: right;
     }
 
@@ -334,6 +338,12 @@
       color: var(--muted);
       border-color: rgba(102, 112, 133, .24);
       background: rgba(102, 112, 133, .08);
+    }
+
+    .status.carryover {
+      color: var(--unpaid);
+      border-color: rgba(135, 91, 247, .24);
+      background: rgba(135, 91, 247, .08);
     }
 
     .cell-input {
@@ -659,6 +669,10 @@
         <div class="summary-value fixed" id="fixedAmount">0円</div>
       </div>
       <div class="summary-item">
+        <div class="summary-label">来月持ち越し</div>
+        <div class="summary-value carry" id="carryoverAmount">0円</div>
+      </div>
+      <div class="summary-item">
         <div class="summary-label">未確定</div>
         <div class="summary-value selected" id="selectedAmount">0円</div>
       </div>
@@ -785,6 +799,7 @@
       totalAmount: document.getElementById("totalAmount"),
       adAmount: document.getElementById("adAmount"),
       fixedAmount: document.getElementById("fixedAmount"),
+      carryoverAmount: document.getElementById("carryoverAmount"),
       selectedAmount: document.getElementById("selectedAmount"),
       adSectionTotal: document.getElementById("adSectionTotal"),
       fixedSectionTotal: document.getElementById("fixedSectionTotal"),
@@ -883,15 +898,17 @@
       const confirmed = confirmedRows(rows);
       const confirmedAd = confirmedRows(adRows);
       const confirmedFixed = confirmedRows(fixedRows);
+      const carryoverRows = rows.filter(row => getRowStatus(row) === "持ち越し");
       const pendingCount = rows.filter(row => getRowStatus(row) === "未確定").length;
       const excludedCount = rows.filter(row => getRowStatus(row) === "対象外").length;
 
       el.totalAmount.textContent = formatYen(sumRows(confirmed));
       el.adAmount.textContent = formatYen(sumRows(confirmedAd));
       el.fixedAmount.textContent = formatYen(sumRows(confirmedFixed));
+      el.carryoverAmount.textContent = formatYen(sumRows(carryoverRows));
       el.selectedAmount.textContent = `${pendingCount}件`;
-      el.adSectionTotal.textContent = `${formatYen(sumRows(confirmedAd))} / 未確定${adRows.filter(row => getRowStatus(row) === "未確定").length}件`;
-      el.fixedSectionTotal.textContent = `${formatYen(sumRows(confirmedFixed))} / 未確定${fixedRows.filter(row => getRowStatus(row) === "未確定").length}件`;
+      el.adSectionTotal.textContent = `${formatYen(sumRows(confirmedAd))} / 持越${formatYen(sumRows(adRows.filter(row => getRowStatus(row) === "持ち越し")))}`;
+      el.fixedSectionTotal.textContent = `${formatYen(sumRows(confirmedFixed))} / 持越${formatYen(sumRows(fixedRows.filter(row => getRowStatus(row) === "持ち越し")))}`;
       el.adCount.textContent = adRows.length;
       el.fixedCount.textContent = fixedRows.length;
 
@@ -909,9 +926,12 @@
       const rowHtml = rows.map(row => {
         const { master, entry } = row;
         const status = getRowStatus(row);
-        const statusClass = status === "確定" ? "paid" : status === "対象外" ? "excluded" : "unpaid";
-        const memo = master.memo ? `<div class="item-note">${escapeHtml(master.memo)}</div>` : "";
-        const disabled = entry.excluded ? "disabled" : "";
+        const statusClass = status === "確定" ? "paid" : status === "対象外" ? "excluded" : status === "持ち越し" ? "carryover" : "unpaid";
+        const notes = [];
+        if (master.memo) notes.push(escapeHtml(master.memo));
+        if (entry.carriedFrom) notes.push(`${escapeHtml(entry.carriedFrom)}から持ち越し`);
+        const memo = notes.length ? `<div class="item-note">${notes.join(" / ")}</div>` : "";
+        const disabled = entry.excluded || entry.carryover ? "disabled" : "";
 
         return `
           <tr>
@@ -934,6 +954,7 @@
             <td class="col-actions">
               <span class="mini-actions">
                 <button class="mini-btn" type="button" data-exclude="${master.id}" title="今月なし">${entry.excluded ? "戻" : "休"}</button>
+                <button class="mini-btn" type="button" data-carryover="${master.id}" title="来月持ち越し">${entry.carryover ? "戻" : "翌"}</button>
                 <button class="mini-btn" type="button" data-edit="${master.id}" title="マスター編集">✎</button>
                 <button class="mini-btn delete" type="button" data-delete="${master.id}" title="マスター削除">×</button>
               </span>
@@ -1010,6 +1031,7 @@
       const editId = event.target.closest("[data-edit]")?.dataset.edit;
       const deleteId = event.target.closest("[data-delete]")?.dataset.delete;
       const excludeId = event.target.closest("[data-exclude]")?.dataset.exclude;
+      const carryoverId = event.target.closest("[data-carryover]")?.dataset.carryover;
 
       if (addCategory) {
         openModal(addCategory);
@@ -1026,6 +1048,10 @@
       if (excludeId) {
         toggleExcluded(excludeId);
       }
+
+      if (carryoverId) {
+        toggleCarryover(carryoverId);
+      }
     }
 
     function handleSelection(event) {
@@ -1040,17 +1066,36 @@
     function updateEntry(masterId, field, value) {
       const entry = ensureEntry(masterId, state.currentMonth);
       entry[field] = field === "amount" ? String(Math.max(0, Number(value || 0)) || "") : value;
-      if (field !== "excluded") entry.excluded = false;
+      if (field !== "excluded") {
+        entry.excluded = false;
+        entry.carryover = false;
+      }
       savePayments();
     }
 
     function toggleExcluded(masterId) {
       const entry = ensureEntry(masterId, state.currentMonth);
+      const wasCarryover = entry.carryover;
       entry.excluded = !entry.excluded;
       if (entry.excluded) {
         entry.date = "";
         entry.place = "";
         entry.amount = "";
+        entry.carryover = false;
+        if (wasCarryover) removeAutoCarryoverFromNextMonth(masterId);
+      }
+      savePayments();
+      render();
+    }
+
+    function toggleCarryover(masterId) {
+      const entry = ensureEntry(masterId, state.currentMonth);
+      entry.carryover = !entry.carryover;
+      if (entry.carryover) {
+        entry.excluded = false;
+        copyCarryoverToNextMonth(masterId, entry);
+      } else {
+        removeAutoCarryoverFromNextMonth(masterId);
       }
       savePayments();
       render();
@@ -1193,7 +1238,9 @@
         date: String(entry.date || ""),
         place: String(entry.place || ""),
         amount: entry.amount === 0 ? "0" : String(entry.amount || ""),
-        excluded: Boolean(entry.excluded)
+        excluded: Boolean(entry.excluded),
+        carryover: Boolean(entry.carryover),
+        carriedFrom: String(entry.carriedFrom || "")
       };
     }
 
@@ -1240,7 +1287,9 @@
         date: payment.date,
         place: "",
         amount: String(payment.amount || ""),
-        excluded: false
+        excluded: false,
+        carryover: false,
+        carriedFrom: ""
       });
     }
 
@@ -1251,14 +1300,16 @@
         date: "",
         place: "",
         amount: "",
-        excluded: false
+        excluded: false,
+        carryover: false,
+        carriedFrom: ""
       };
     }
 
     function ensureEntry(masterId, month) {
       let entry = state.entries.find(item => item.masterId === masterId && item.month === month);
       if (!entry) {
-        entry = { masterId, month, date: "", place: "", amount: "", excluded: false };
+        entry = { masterId, month, date: "", place: "", amount: "", excluded: false, carryover: false, carriedFrom: "" };
         state.entries.push(entry);
       }
       return entry;
@@ -1266,8 +1317,39 @@
 
     function getRowStatus(row) {
       if (row.entry.excluded) return "対象外";
+      if (row.entry.carryover) return "持ち越し";
       if (row.entry.date && row.entry.place.trim() && row.entry.amount !== "") return "確定";
       return "未確定";
+    }
+
+    function nextMonthValue(monthValue) {
+      const [year, month] = monthValue.split("-").map(Number);
+      return toMonthValue(new Date(year, month, 1));
+    }
+
+    function copyCarryoverToNextMonth(masterId, sourceEntry) {
+      const nextMonth = nextMonthValue(state.currentMonth);
+      const nextEntry = ensureEntry(masterId, nextMonth);
+      if (!nextEntry.date && !nextEntry.place && nextEntry.amount === "") {
+        nextEntry.amount = sourceEntry.amount || "";
+        nextEntry.carriedFrom = state.currentMonth;
+        nextEntry.excluded = false;
+        nextEntry.carryover = false;
+      }
+    }
+
+    function removeAutoCarryoverFromNextMonth(masterId) {
+      const nextMonth = nextMonthValue(state.currentMonth);
+      state.entries = state.entries.filter(entry => {
+        const isAutoCarryover = entry.masterId === masterId
+          && entry.month === nextMonth
+          && entry.carriedFrom === state.currentMonth
+          && !entry.date
+          && !entry.place
+          && !entry.carryover
+          && !entry.excluded;
+        return !isAutoCarryover;
+      });
     }
 
     function createId() {
