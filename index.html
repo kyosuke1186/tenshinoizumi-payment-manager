@@ -253,7 +253,7 @@
 
     table {
       width: 100%;
-      min-width: 1040px;
+      min-width: 1160px;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -286,6 +286,10 @@
       width: 142px;
     }
 
+    .col-time {
+      width: 110px;
+    }
+
     .col-place {
       width: 240px;
     }
@@ -300,7 +304,7 @@
     }
 
     .col-actions {
-      width: 154px;
+      width: 194px;
       text-align: right;
     }
 
@@ -964,6 +968,9 @@
             <td class="col-date">
               <input class="cell-input" type="date" data-field="date" data-master="${master.id}" value="${escapeHtml(entry.date)}" ${disabled}>
             </td>
+            <td class="col-time">
+              <input class="cell-input" type="time" data-field="time" data-master="${master.id}" value="${escapeHtml(entry.time)}" ${disabled}>
+            </td>
             <td class="col-place">
               <input class="cell-input" type="text" data-field="place" data-master="${master.id}" value="${escapeHtml(entry.place)}" placeholder="手渡し場所" ${disabled}>
             </td>
@@ -977,6 +984,7 @@
               <span class="mini-actions">
                 <button class="mini-btn" type="button" data-exclude="${master.id}" title="今月なし">${entry.excluded ? "戻" : "休"}</button>
                 <button class="mini-btn" type="button" data-carryover="${master.id}" title="来月持ち越し">${entry.carryover ? "戻" : "翌"}</button>
+                <button class="mini-btn" type="button" data-copy="${master.id}" title="支払いメモをコピー">メ</button>
                 <button class="mini-btn" type="button" data-edit="${master.id}" title="マスター編集">✎</button>
                 <button class="mini-btn delete" type="button" data-delete="${master.id}" title="マスター削除">×</button>
               </span>
@@ -991,6 +999,7 @@
             <tr>
               <th class="col-item">項目</th>
               <th class="col-date">日程</th>
+              <th class="col-time">時間</th>
               <th class="col-place">場所</th>
               <th class="col-amount">金額</th>
               <th class="col-status">状態</th>
@@ -1054,6 +1063,7 @@
       const deleteId = event.target.closest("[data-delete]")?.dataset.delete;
       const excludeId = event.target.closest("[data-exclude]")?.dataset.exclude;
       const carryoverId = event.target.closest("[data-carryover]")?.dataset.carryover;
+      const copyId = event.target.closest("[data-copy]")?.dataset.copy;
 
       if (addCategory) {
         openModal(addCategory);
@@ -1073,6 +1083,10 @@
 
       if (carryoverId) {
         toggleCarryover(carryoverId);
+      }
+
+      if (copyId) {
+        copyPaymentMemo(copyId);
       }
     }
 
@@ -1116,6 +1130,7 @@
       entry.excluded = !entry.excluded;
       if (entry.excluded) {
         entry.date = "";
+        entry.time = "";
         entry.place = "";
         entry.amount = "";
         entry.carryover = false;
@@ -1273,6 +1288,7 @@
         masterId: String(entry.masterId),
         month: String(entry.month),
         date: String(entry.date || ""),
+        time: String(entry.time || ""),
         place: String(entry.place || ""),
         amount: entry.amount === 0 ? "0" : String(entry.amount || ""),
         excluded: Boolean(entry.excluded),
@@ -1322,6 +1338,7 @@
         masterId: master.id,
         month: payment.date.slice(0, 7),
         date: payment.date,
+        time: "",
         place: "",
         amount: String(payment.amount || ""),
         excluded: false,
@@ -1335,6 +1352,7 @@
         masterId,
         month,
         date: "",
+        time: "",
         place: "",
         amount: "",
         excluded: false,
@@ -1346,7 +1364,7 @@
     function ensureEntry(masterId, month) {
       let entry = state.entries.find(item => item.masterId === masterId && item.month === month);
       if (!entry) {
-        entry = { masterId, month, date: "", place: "", amount: "", excluded: false, carryover: false, carriedFrom: "" };
+        entry = { masterId, month, date: "", time: "", place: "", amount: "", excluded: false, carryover: false, carriedFrom: "" };
         state.entries.push(entry);
       }
       return entry;
@@ -1367,7 +1385,7 @@
     function copyCarryoverToNextMonth(masterId, sourceEntry) {
       const nextMonth = nextMonthValue(state.currentMonth);
       const nextEntry = ensureEntry(masterId, nextMonth);
-      if (!nextEntry.date && !nextEntry.place && nextEntry.amount === "") {
+      if (!nextEntry.date && !nextEntry.time && !nextEntry.place && nextEntry.amount === "") {
         nextEntry.amount = sourceEntry.amount || "";
         nextEntry.carriedFrom = state.currentMonth;
         nextEntry.excluded = false;
@@ -1382,11 +1400,32 @@
           && entry.month === nextMonth
           && entry.carriedFrom === state.currentMonth
           && !entry.date
+          && !entry.time
           && !entry.place
           && !entry.carryover
           && !entry.excluded;
         return !isAutoCarryover;
       });
+    }
+
+    async function copyPaymentMemo(masterId) {
+      const master = state.masters.find(item => item.id === masterId);
+      if (!master) return;
+      const entry = getEntry(masterId, state.currentMonth);
+      const memo = [
+        `支払い先：${master.name}`,
+        `日程：${entry.date || "未定"}${entry.time ? ` ${entry.time}` : ""}`,
+        `場所：${entry.place || "未定"}`,
+        `金額：${entry.amount ? formatYen(entry.amount) : "未定"}`,
+        `状態：${getRowStatus({ master, entry })}`
+      ].join("\n");
+
+      try {
+        await navigator.clipboard.writeText(memo);
+        showToast("支払いメモをコピーしました");
+      } catch {
+        window.prompt("支払いメモをコピーしてください", memo);
+      }
     }
 
     function createId() {
