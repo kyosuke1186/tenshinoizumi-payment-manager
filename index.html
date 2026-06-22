@@ -304,7 +304,7 @@
     }
 
     .col-actions {
-      width: 194px;
+      width: 154px;
       text-align: right;
     }
 
@@ -663,6 +663,7 @@
         <input class="month-input" id="monthPicker" type="month" aria-label="表示月">
         <button class="icon-btn" id="nextMonth" type="button" title="翌月">›</button>
         <button class="text-btn" id="thisMonth" type="button">今月</button>
+        <button class="text-btn" id="copyConfirmed" type="button">確定メモ</button>
         <button class="text-btn" id="openSettings" type="button">設定</button>
       </div>
     </header>
@@ -984,7 +985,6 @@
               <span class="mini-actions">
                 <button class="mini-btn" type="button" data-exclude="${master.id}" title="今月なし">${entry.excluded ? "戻" : "休"}</button>
                 <button class="mini-btn" type="button" data-carryover="${master.id}" title="来月持ち越し">${entry.carryover ? "戻" : "翌"}</button>
-                <button class="mini-btn" type="button" data-copy="${master.id}" title="支払いメモをコピー">メ</button>
                 <button class="mini-btn" type="button" data-edit="${master.id}" title="マスター編集">✎</button>
                 <button class="mini-btn delete" type="button" data-delete="${master.id}" title="マスター削除">×</button>
               </span>
@@ -1063,7 +1063,6 @@
       const deleteId = event.target.closest("[data-delete]")?.dataset.delete;
       const excludeId = event.target.closest("[data-exclude]")?.dataset.exclude;
       const carryoverId = event.target.closest("[data-carryover]")?.dataset.carryover;
-      const copyId = event.target.closest("[data-copy]")?.dataset.copy;
 
       if (addCategory) {
         openModal(addCategory);
@@ -1085,9 +1084,6 @@
         toggleCarryover(carryoverId);
       }
 
-      if (copyId) {
-        copyPaymentMemo(copyId);
-      }
     }
 
     function handleSelection(event) {
@@ -1408,23 +1404,35 @@
       });
     }
 
-    async function copyPaymentMemo(masterId) {
-      const master = state.masters.find(item => item.id === masterId);
-      if (!master) return;
-      const entry = getEntry(masterId, state.currentMonth);
-      const memo = [
-        `支払い先：${master.name}`,
-        `日程：${entry.date || "未定"}${entry.time ? ` ${entry.time}` : ""}`,
-        `場所：${entry.place || "未定"}`,
-        `金額：${entry.amount ? formatYen(entry.amount) : "未定"}`,
-        `状態：${getRowStatus({ master, entry })}`
-      ].join("\n");
+    async function copyConfirmedMemo() {
+      const rows = confirmedRows(currentMonthRows())
+        .sort((a, b) => `${a.entry.date} ${a.entry.time}`.localeCompare(`${b.entry.date} ${b.entry.time}`));
 
+      if (!rows.length) {
+        showToast("確定している支払いがありません");
+        return;
+      }
+
+      const lines = [
+        `${state.currentMonth} 確定支払い`,
+        `合計：${formatYen(sumRows(rows))}`,
+        ""
+      ];
+
+      rows.forEach((row, index) => {
+        lines.push(`${index + 1}. ${row.master.name}`);
+        lines.push(`日程：${row.entry.date}${row.entry.time ? ` ${row.entry.time}` : ""}`);
+        lines.push(`場所：${row.entry.place}`);
+        lines.push(`金額：${formatYen(row.entry.amount)}`);
+        if (index < rows.length - 1) lines.push("");
+      });
+
+      const memo = lines.join("\n");
       try {
         await navigator.clipboard.writeText(memo);
-        showToast("支払いメモをコピーしました");
+        showToast("確定支払いメモをコピーしました");
       } catch {
-        window.prompt("支払いメモをコピーしてください", memo);
+        window.prompt("確定支払いメモをコピーしてください", memo);
       }
     }
 
@@ -1450,6 +1458,7 @@
       state.currentMonth = toMonthValue(new Date());
       render();
     });
+    document.getElementById("copyConfirmed").addEventListener("click", copyConfirmedMemo);
     document.getElementById("openSettings").addEventListener("click", openSettings);
     document.getElementById("clearMonth").addEventListener("click", clearCurrentMonth);
     document.getElementById("closeModal").addEventListener("click", closeModal);
