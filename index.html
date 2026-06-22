@@ -840,6 +840,16 @@
       return `${Number(value || 0).toLocaleString("ja-JP")}円`;
     }
 
+    function parseAmount(value) {
+      const digits = String(value || "").replace(/[^\d]/g, "");
+      return digits ? String(Number(digits)) : "";
+    }
+
+    function formatAmountInput(value) {
+      const amount = parseAmount(value);
+      return amount ? Number(amount).toLocaleString("ja-JP") : "";
+    }
+
     function loadPayments() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
@@ -958,7 +968,7 @@
               <input class="cell-input" type="text" data-field="place" data-master="${master.id}" value="${escapeHtml(entry.place)}" placeholder="手渡し場所" ${disabled}>
             </td>
             <td class="col-amount">
-              <input class="cell-input amount-input" type="number" min="0" step="1" inputmode="numeric" data-field="amount" data-master="${master.id}" value="${escapeHtml(entry.amount)}" placeholder="0" ${disabled}>
+              <input class="cell-input amount-input" type="text" inputmode="numeric" data-field="amount" data-master="${master.id}" value="${escapeHtml(formatAmountInput(entry.amount))}" placeholder="0" ${disabled}>
             </td>
             <td class="col-status">
               <span class="status ${statusClass}">${status}</span>
@@ -1079,13 +1089,16 @@
       const field = event.target?.dataset?.field;
       const masterId = event.target?.dataset?.master;
       if (!field || !masterId) return;
+      if (field === "amount") {
+        event.target.value = formatAmountInput(event.target.value);
+      }
       updateEntry(masterId, field, event.target.value, { sync: false });
     }
 
     function updateEntry(masterId, field, value, options = {}) {
       const shouldSync = options.sync !== false;
       const entry = ensureEntry(masterId, state.currentMonth);
-      entry[field] = field === "amount" ? String(Math.max(0, Number(value || 0)) || "") : value;
+      entry[field] = field === "amount" ? parseAmount(value) : value;
       if (field !== "excluded") {
         entry.excluded = false;
         entry.carryover = false;
