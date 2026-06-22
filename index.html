@@ -1,0 +1,1221 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>月別支払い管理</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f9fafb;
+      --line: #dde2e8;
+      --text: #1d2430;
+      --muted: #667085;
+      --ad: #0f766e;
+      --fixed: #b45309;
+      --primary: #315c72;
+      --primary-dark: #234455;
+      --danger: #b42318;
+      --paid: #147d45;
+      --unpaid: #875bf7;
+      --shadow: 0 12px 32px rgba(29, 36, 48, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 0 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    .month-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .icon-btn,
+    .text-btn {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 8px;
+      min-height: 42px;
+      transition: .16s ease;
+    }
+
+    .icon-btn {
+      width: 42px;
+      display: inline-grid;
+      place-items: center;
+      font-size: 1.05rem;
+    }
+
+    .text-btn {
+      padding: 0 14px;
+      font-weight: 700;
+    }
+
+    .icon-btn:hover,
+    .text-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .month-input {
+      width: 150px;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 10px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .summary-item {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 18px rgba(29, 36, 48, .04);
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .summary-value {
+      font-size: clamp(1.15rem, 2.6vw, 1.75rem);
+      font-weight: 850;
+      line-height: 1.15;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+
+    .ad {
+      color: var(--ad);
+    }
+
+    .fixed {
+      color: var(--fixed);
+    }
+
+    .selected {
+      color: var(--primary);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-soft);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 11px;
+      height: 36px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+
+    .mark.ad-mark {
+      background: var(--ad);
+    }
+
+    .mark.fixed-mark {
+      background: var(--fixed);
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      line-height: 1.2;
+    }
+
+    .section-title p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    .add-btn {
+      min-height: 38px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 13px;
+      color: #fff;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .add-btn.ad-bg {
+      background: var(--ad);
+    }
+
+    .add-btn.fixed-bg {
+      background: var(--fixed);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+      font-size: .9rem;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: .76rem;
+      background: #fff;
+      font-weight: 800;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .col-check {
+      width: 42px;
+    }
+
+    .col-date {
+      width: 70px;
+    }
+
+    .col-amount {
+      width: 118px;
+      text-align: right;
+    }
+
+    .col-status {
+      width: 90px;
+    }
+
+    .col-actions {
+      width: 92px;
+      text-align: right;
+    }
+
+    .item-name {
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .item-note {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: .78rem;
+      overflow-wrap: anywhere;
+    }
+
+    .amount {
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .status {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: .76rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .status.paid {
+      color: var(--paid);
+      border-color: rgba(20, 125, 69, .24);
+      background: rgba(20, 125, 69, .08);
+    }
+
+    .status.unpaid {
+      color: var(--unpaid);
+      border-color: rgba(135, 91, 247, .24);
+      background: rgba(135, 91, 247, .08);
+    }
+
+    .mini-actions {
+      display: inline-flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .mini-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .mini-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .mini-btn.delete:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .empty {
+      padding: 28px 16px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .92rem;
+    }
+
+    .footer-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: .86rem;
+      flex-wrap: wrap;
+    }
+
+    .danger-link {
+      border: 0;
+      color: var(--danger);
+      background: transparent;
+      font-weight: 800;
+      padding: 8px 0;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(16, 24, 40, .46);
+      z-index: 20;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(560px, 100%);
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 28px 80px rgba(16, 24, 40, .25);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-head h3 {
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 800;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 9px 11px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 86px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(49, 92, 114, .14);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 0 20px 20px;
+    }
+
+    .settings-note {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: .86rem;
+      line-height: 1.6;
+    }
+
+    .primary-btn,
+    .ghost-btn {
+      min-height: 42px;
+      border-radius: 8px;
+      padding: 0 16px;
+      font-weight: 850;
+    }
+
+    .primary-btn {
+      border: 0;
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .primary-btn:hover {
+      background: var(--primary-dark);
+    }
+
+    .ghost-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+    }
+
+    .close-btn {
+      border: 0;
+      background: transparent;
+      font-size: 1.45rem;
+      line-height: 1;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+    }
+
+    .close-btn:hover {
+      background: var(--surface-soft);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translate(-50%, 80px);
+      background: #1d2430;
+      color: #fff;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-weight: 800;
+      opacity: 0;
+      transition: .22s ease;
+      z-index: 30;
+      max-width: calc(100% - 32px);
+      text-align: center;
+    }
+
+    .toast.show {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
+
+    @media (max-width: 900px) {
+      .summary,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      .app {
+        width: min(100% - 20px, 1180px);
+        padding-top: 12px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .month-control {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .month-input {
+        flex: 1 1 140px;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .section-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .add-btn {
+        width: 100%;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-actions {
+        flex-direction: column-reverse;
+      }
+
+      .primary-btn,
+      .ghost-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>月別支払い管理</h1>
+        <p>広告費と固定費を月ごとに手入力して、合計をすぐ確認できます。</p>
+      </div>
+
+      <div class="month-control" aria-label="表示月の切り替え">
+        <button class="icon-btn" id="prevMonth" type="button" title="前月">‹</button>
+        <input class="month-input" id="monthPicker" type="month" aria-label="表示月">
+        <button class="icon-btn" id="nextMonth" type="button" title="翌月">›</button>
+        <button class="text-btn" id="thisMonth" type="button">今月</button>
+        <button class="text-btn" id="openSettings" type="button">設定</button>
+      </div>
+    </header>
+
+    <section class="summary" aria-label="月別集計">
+      <div class="summary-item">
+        <div class="summary-label">月合計</div>
+        <div class="summary-value" id="totalAmount">0円</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">広告費</div>
+        <div class="summary-value ad" id="adAmount">0円</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">固定費</div>
+        <div class="summary-value fixed" id="fixedAmount">0円</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">選択中の合計</div>
+        <div class="summary-value selected" id="selectedAmount">0円</div>
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="支払い一覧">
+      <article class="section">
+        <div class="section-head">
+          <div class="section-title">
+            <span class="mark ad-mark" aria-hidden="true"></span>
+            <div>
+              <h2>広告費</h2>
+              <p><span id="adCount">0</span>件 / <span id="adSectionTotal">0円</span></p>
+            </div>
+          </div>
+          <button class="add-btn ad-bg" type="button" data-add="広告費">＋ 追加</button>
+        </div>
+        <div class="table-wrap" id="adTable"></div>
+      </article>
+
+      <article class="section">
+        <div class="section-head">
+          <div class="section-title">
+            <span class="mark fixed-mark" aria-hidden="true"></span>
+            <div>
+              <h2>固定費</h2>
+              <p><span id="fixedCount">0</span>件 / <span id="fixedSectionTotal">0円</span></p>
+            </div>
+          </div>
+          <button class="add-btn fixed-bg" type="button" data-add="固定費">＋ 追加</button>
+        </div>
+        <div class="table-wrap" id="fixedTable"></div>
+      </article>
+    </section>
+
+    <div class="footer-actions">
+      <span id="syncStatus">このブラウザに自動保存されます。</span>
+      <button class="danger-link" id="clearMonth" type="button">表示月のデータを全削除</button>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <form class="modal" id="paymentForm">
+      <div class="modal-head">
+        <h3 id="modalTitle">支払いを追加</h3>
+        <button class="close-btn" id="closeModal" type="button" aria-label="閉じる">×</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="paymentId">
+        <div class="form-grid">
+          <div class="field">
+            <label for="paymentCategory">カテゴリ</label>
+            <select id="paymentCategory" required>
+              <option value="広告費">広告費</option>
+              <option value="固定費">固定費</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="paymentDate">支払日</label>
+            <input id="paymentDate" type="date" required>
+          </div>
+          <div class="field full">
+            <label for="paymentName">項目名</label>
+            <input id="paymentName" type="text" placeholder="例：Google広告、サーバー代" required>
+          </div>
+          <div class="field">
+            <label for="paymentAmount">金額</label>
+            <input id="paymentAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="例：300000" required>
+          </div>
+          <div class="field">
+            <label for="paymentStatus">状態</label>
+            <select id="paymentStatus">
+              <option value="未払い">未払い</option>
+              <option value="支払い済み">支払い済み</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="paymentMemo">メモ</label>
+            <textarea id="paymentMemo" placeholder="任意でメモを入力"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost-btn" id="cancelModal" type="button">キャンセル</button>
+        <button class="primary-btn" type="submit">保存</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" id="settingsBackdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <form class="modal" id="settingsForm">
+      <div class="modal-head">
+        <h3 id="settingsTitle">保存先設定</h3>
+        <button class="close-btn" id="closeSettings" type="button" aria-label="閉じる">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field">
+          <label for="scriptUrl">Apps Script WebアプリURL</label>
+          <input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+        <div class="field">
+          <label for="syncToken">同期トークン</label>
+          <input id="syncToken" type="password" placeholder="Apps ScriptのAPI_TOKEN">
+        </div>
+        <p class="settings-note">URLを保存すると、支払いデータをGoogleスプレッドシートへ同期します。未設定でも、このブラウザ内には保存されます。</p>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost-btn" id="syncNow" type="button">今すぐ同期</button>
+        <button class="primary-btn" type="submit">設定を保存</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const STORAGE_KEY = "tenshinoizumi-payment-manager-v1";
+    const CONFIG_KEY = "tenshinoizumi-payment-manager-config-v1";
+    const categories = ["広告費", "固定費"];
+
+    const state = {
+      payments: [],
+      currentMonth: toMonthValue(new Date()),
+      selectedIds: new Set(),
+      config: {
+        scriptUrl: "",
+        token: ""
+      },
+      isSyncing: false
+    };
+
+    const el = {
+      monthPicker: document.getElementById("monthPicker"),
+      totalAmount: document.getElementById("totalAmount"),
+      adAmount: document.getElementById("adAmount"),
+      fixedAmount: document.getElementById("fixedAmount"),
+      selectedAmount: document.getElementById("selectedAmount"),
+      adSectionTotal: document.getElementById("adSectionTotal"),
+      fixedSectionTotal: document.getElementById("fixedSectionTotal"),
+      adCount: document.getElementById("adCount"),
+      fixedCount: document.getElementById("fixedCount"),
+      adTable: document.getElementById("adTable"),
+      fixedTable: document.getElementById("fixedTable"),
+      modalBackdrop: document.getElementById("modalBackdrop"),
+      modalTitle: document.getElementById("modalTitle"),
+      form: document.getElementById("paymentForm"),
+      paymentId: document.getElementById("paymentId"),
+      paymentCategory: document.getElementById("paymentCategory"),
+      paymentDate: document.getElementById("paymentDate"),
+      paymentName: document.getElementById("paymentName"),
+      paymentAmount: document.getElementById("paymentAmount"),
+      paymentStatus: document.getElementById("paymentStatus"),
+      paymentMemo: document.getElementById("paymentMemo"),
+      syncStatus: document.getElementById("syncStatus"),
+      settingsBackdrop: document.getElementById("settingsBackdrop"),
+      settingsForm: document.getElementById("settingsForm"),
+      scriptUrl: document.getElementById("scriptUrl"),
+      syncToken: document.getElementById("syncToken"),
+      toast: document.getElementById("toast")
+    };
+
+    function toMonthValue(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      return `${year}-${month}`;
+    }
+
+    function formatYen(value) {
+      return `${Number(value || 0).toLocaleString("ja-JP")}円`;
+    }
+
+    function loadPayments() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        state.payments = Array.isArray(saved) ? saved : [];
+      } catch {
+        state.payments = [];
+      }
+
+      try {
+        const savedConfig = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+        state.config.scriptUrl = typeof savedConfig.scriptUrl === "string" ? savedConfig.scriptUrl : "";
+        state.config.token = typeof savedConfig.token === "string" ? savedConfig.token : "";
+      } catch {
+        state.config.scriptUrl = "";
+        state.config.token = "";
+      }
+    }
+
+    function savePayments() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.payments));
+      syncToSheet();
+    }
+
+    function saveConfig() {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(state.config));
+    }
+
+    function currentMonthPayments() {
+      return state.payments
+        .filter(payment => payment.date.startsWith(state.currentMonth))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name, "ja"));
+    }
+
+    function sum(payments) {
+      return payments.reduce((total, payment) => total + Number(payment.amount || 0), 0);
+    }
+
+    function render() {
+      el.monthPicker.value = state.currentMonth;
+
+      const monthPayments = currentMonthPayments();
+      const adPayments = monthPayments.filter(payment => payment.category === "広告費");
+      const fixedPayments = monthPayments.filter(payment => payment.category === "固定費");
+      const selectedPayments = monthPayments.filter(payment => state.selectedIds.has(payment.id));
+
+      el.totalAmount.textContent = formatYen(sum(monthPayments));
+      el.adAmount.textContent = formatYen(sum(adPayments));
+      el.fixedAmount.textContent = formatYen(sum(fixedPayments));
+      el.selectedAmount.textContent = formatYen(sum(selectedPayments));
+      el.adSectionTotal.textContent = formatYen(sum(adPayments));
+      el.fixedSectionTotal.textContent = formatYen(sum(fixedPayments));
+      el.adCount.textContent = adPayments.length;
+      el.fixedCount.textContent = fixedPayments.length;
+
+      renderTable(el.adTable, adPayments, "広告費");
+      renderTable(el.fixedTable, fixedPayments, "固定費");
+      updateSyncStatus();
+    }
+
+    function renderTable(container, payments, category) {
+      if (!payments.length) {
+        container.innerHTML = `<div class="empty">${category}の項目はまだありません。</div>`;
+        return;
+      }
+
+      const rows = payments.map(payment => {
+        const day = Number(payment.date.slice(-2));
+        const checked = state.selectedIds.has(payment.id) ? "checked" : "";
+        const statusClass = payment.status === "支払い済み" ? "paid" : "unpaid";
+        const memo = payment.memo ? `<div class="item-note">${escapeHtml(payment.memo)}</div>` : "";
+
+        return `
+          <tr>
+            <td class="col-check">
+              <input type="checkbox" data-select="${payment.id}" ${checked} aria-label="${escapeHtml(payment.name)}を選択">
+            </td>
+            <td class="col-date">${day}日</td>
+            <td>
+              <div class="item-name">${escapeHtml(payment.name)}</div>
+              ${memo}
+            </td>
+            <td class="col-amount amount">${formatYen(payment.amount)}</td>
+            <td class="col-status">
+              <button class="status ${statusClass}" type="button" data-status="${payment.id}">${payment.status}</button>
+            </td>
+            <td class="col-actions">
+              <span class="mini-actions">
+                <button class="mini-btn" type="button" data-edit="${payment.id}" title="編集">✎</button>
+                <button class="mini-btn delete" type="button" data-delete="${payment.id}" title="削除">×</button>
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      container.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th class="col-check"></th>
+              <th class="col-date">日付</th>
+              <th>項目</th>
+              <th class="col-amount">金額</th>
+              <th class="col-status">状態</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function openModal(category, id = "") {
+      const payment = id ? state.payments.find(item => item.id === id) : null;
+      el.paymentId.value = payment?.id || "";
+      el.paymentCategory.value = payment?.category || category || "広告費";
+      el.paymentDate.value = payment?.date || `${state.currentMonth}-01`;
+      el.paymentName.value = payment?.name || "";
+      el.paymentAmount.value = payment?.amount || "";
+      el.paymentStatus.value = payment?.status || "未払い";
+      el.paymentMemo.value = payment?.memo || "";
+      el.modalTitle.textContent = payment ? "支払いを編集" : `${el.paymentCategory.value}を追加`;
+      el.modalBackdrop.classList.add("open");
+      setTimeout(() => el.paymentName.focus(), 50);
+    }
+
+    function closeModal() {
+      el.modalBackdrop.classList.remove("open");
+      el.form.reset();
+    }
+
+    function handleSubmit(event) {
+      event.preventDefault();
+
+      const id = el.paymentId.value || createId();
+      const payment = {
+        id,
+        category: el.paymentCategory.value,
+        date: el.paymentDate.value,
+        name: el.paymentName.value.trim(),
+        amount: Number(el.paymentAmount.value || 0),
+        status: el.paymentStatus.value,
+        memo: el.paymentMemo.value.trim()
+      };
+
+      if (!categories.includes(payment.category) || !payment.date || !payment.name || payment.amount < 0) {
+        showToast("入力内容を確認してください");
+        return;
+      }
+
+      const existingIndex = state.payments.findIndex(item => item.id === id);
+      if (existingIndex >= 0) {
+        state.payments[existingIndex] = payment;
+      } else {
+        state.payments.push(payment);
+      }
+
+      state.currentMonth = payment.date.slice(0, 7);
+      savePayments();
+      closeModal();
+      render();
+      showToast("保存しました");
+    }
+
+    function handlePageClick(event) {
+      const addCategory = event.target.closest("[data-add]")?.dataset.add;
+      const editId = event.target.closest("[data-edit]")?.dataset.edit;
+      const deleteId = event.target.closest("[data-delete]")?.dataset.delete;
+      const statusId = event.target.closest("[data-status]")?.dataset.status;
+
+      if (addCategory) {
+        openModal(addCategory);
+      }
+
+      if (editId) {
+        openModal("", editId);
+      }
+
+      if (deleteId) {
+        deletePayment(deleteId);
+      }
+
+      if (statusId) {
+        toggleStatus(statusId);
+      }
+    }
+
+    function handleSelection(event) {
+      const id = event.target?.dataset?.select;
+      if (!id) return;
+
+      if (event.target.checked) {
+        state.selectedIds.add(id);
+      } else {
+        state.selectedIds.delete(id);
+      }
+      render();
+    }
+
+    function toggleStatus(id) {
+      const payment = state.payments.find(item => item.id === id);
+      if (!payment) return;
+      payment.status = payment.status === "支払い済み" ? "未払い" : "支払い済み";
+      savePayments();
+      render();
+    }
+
+    function deletePayment(id) {
+      const payment = state.payments.find(item => item.id === id);
+      if (!payment) return;
+      if (!confirm(`「${payment.name}」を削除しますか？`)) return;
+
+      state.payments = state.payments.filter(item => item.id !== id);
+      state.selectedIds.delete(id);
+      savePayments();
+      render();
+      showToast("削除しました");
+    }
+
+    function shiftMonth(offset) {
+      const [year, month] = state.currentMonth.split("-").map(Number);
+      const date = new Date(year, month - 1 + offset, 1);
+      state.currentMonth = toMonthValue(date);
+      render();
+    }
+
+    function clearCurrentMonth() {
+      const monthPayments = currentMonthPayments();
+      if (!monthPayments.length) {
+        showToast("削除するデータがありません");
+        return;
+      }
+      if (!confirm(`${state.currentMonth}のデータをすべて削除しますか？`)) return;
+
+      const monthIds = new Set(monthPayments.map(payment => payment.id));
+      state.payments = state.payments.filter(payment => !monthIds.has(payment.id));
+      monthIds.forEach(id => state.selectedIds.delete(id));
+      savePayments();
+      render();
+      showToast("表示月のデータを削除しました");
+    }
+
+    function showToast(message) {
+      el.toast.textContent = message;
+      el.toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => el.toast.classList.remove("show"), 1800);
+    }
+
+    function openSettings() {
+      el.scriptUrl.value = state.config.scriptUrl;
+      el.syncToken.value = state.config.token;
+      el.settingsBackdrop.classList.add("open");
+      setTimeout(() => el.scriptUrl.focus(), 50);
+    }
+
+    function closeSettings() {
+      el.settingsBackdrop.classList.remove("open");
+    }
+
+    function updateSyncStatus(message = "") {
+      if (message) {
+        el.syncStatus.textContent = message;
+        return;
+      }
+      el.syncStatus.textContent = state.config.scriptUrl
+        ? "このブラウザとGoogleスプレッドシートに保存されます。"
+        : "このブラウザに自動保存されます。";
+    }
+
+    async function loadFromSheet() {
+      if (!state.config.scriptUrl) return;
+      updateSyncStatus("Googleスプレッドシートから読み込み中...");
+      try {
+        const result = await requestSheet("list");
+        if (Array.isArray(result.payments)) {
+          state.payments = result.payments.map(normalizePayment).filter(Boolean);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state.payments));
+          render();
+          showToast("スプレッドシートから読み込みました");
+        }
+      } catch (error) {
+        updateSyncStatus("スプレッドシートを読み込めませんでした。ブラウザ内のデータを表示しています。");
+      }
+    }
+
+    async function syncToSheet() {
+      if (!state.config.scriptUrl || state.isSyncing) {
+        updateSyncStatus();
+        return;
+      }
+      state.isSyncing = true;
+      updateSyncStatus("Googleスプレッドシートへ保存中...");
+      try {
+        await requestSheet("replaceAll", { payments: state.payments });
+        updateSyncStatus(`Googleスプレッドシートへ保存済み ${new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`);
+      } catch (error) {
+        updateSyncStatus("スプレッドシート保存に失敗しました。ブラウザ内には保存されています。");
+      } finally {
+        state.isSyncing = false;
+      }
+    }
+
+    async function requestSheet(action, payload = {}) {
+      const response = await fetch(state.config.scriptUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify({ action, token: state.config.token, ...payload })
+      });
+      const result = await response.json();
+      if (!result.ok) {
+        throw new Error(result.error || "Sheet request failed");
+      }
+      return result;
+    }
+
+    function normalizePayment(payment) {
+      if (!payment || !payment.id || !payment.date || !payment.name) return null;
+      return {
+        id: String(payment.id),
+        category: categories.includes(payment.category) ? payment.category : "固定費",
+        date: String(payment.date),
+        name: String(payment.name),
+        amount: Number(payment.amount || 0),
+        status: payment.status === "支払い済み" ? "支払い済み" : "未払い",
+        memo: String(payment.memo || "")
+      };
+    }
+
+    function createId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      return `payment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    document.getElementById("prevMonth").addEventListener("click", () => shiftMonth(-1));
+    document.getElementById("nextMonth").addEventListener("click", () => shiftMonth(1));
+    document.getElementById("thisMonth").addEventListener("click", () => {
+      state.currentMonth = toMonthValue(new Date());
+      render();
+    });
+    document.getElementById("openSettings").addEventListener("click", openSettings);
+    document.getElementById("clearMonth").addEventListener("click", clearCurrentMonth);
+    document.getElementById("closeModal").addEventListener("click", closeModal);
+    document.getElementById("cancelModal").addEventListener("click", closeModal);
+    document.getElementById("closeSettings").addEventListener("click", closeSettings);
+    document.getElementById("syncNow").addEventListener("click", () => {
+      savePayments();
+      showToast("同期を開始しました");
+    });
+    el.monthPicker.addEventListener("change", event => {
+      state.currentMonth = event.target.value || toMonthValue(new Date());
+      render();
+    });
+    el.paymentCategory.addEventListener("change", () => {
+      if (!el.paymentId.value) {
+        el.modalTitle.textContent = `${el.paymentCategory.value}を追加`;
+      }
+    });
+    el.form.addEventListener("submit", handleSubmit);
+    el.settingsForm.addEventListener("submit", event => {
+      event.preventDefault();
+      state.config.scriptUrl = el.scriptUrl.value.trim();
+      state.config.token = el.syncToken.value.trim();
+      saveConfig();
+      closeSettings();
+      render();
+      loadFromSheet();
+      showToast("設定を保存しました");
+    });
+    document.addEventListener("click", handlePageClick);
+    document.addEventListener("change", handleSelection);
+    el.modalBackdrop.addEventListener("click", event => {
+      if (event.target === el.modalBackdrop) closeModal();
+    });
+    el.settingsBackdrop.addEventListener("click", event => {
+      if (event.target === el.settingsBackdrop) closeSettings();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && el.modalBackdrop.classList.contains("open")) {
+        closeModal();
+      }
+      if (event.key === "Escape" && el.settingsBackdrop.classList.contains("open")) {
+        closeSettings();
+      }
+    });
+
+    loadPayments();
+    render();
+    loadFromSheet();
+  </script>
+</body>
+</html>
